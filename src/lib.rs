@@ -466,7 +466,14 @@ mod tests {
             vec![Cargo::new(150, 0.5, None)],
             "Parcel".to_string(),
         );
-        let ttn_result = nova.create_ttn(payload).await.unwrap();
+        let ttn_result = match nova.create_ttn(payload).await {
+            Ok(value) => value,
+            Err(error) => {
+                println!("{:#?}", error);
+                panic!("{}", error.to_string());
+            }
+        };
+
         nova.raw
             .internet_document_delete(vec![ttn_result.ttn_ref])
             .await
