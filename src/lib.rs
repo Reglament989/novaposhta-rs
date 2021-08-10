@@ -26,7 +26,7 @@ impl Default for Novaposhta {
 }
 
 impl Novaposhta {
-    pub async fn create_new_ttn(
+    pub async fn create_ttn(
         &self,
         payload: CreateNewTtnPayload,
     ) -> Result<CreateNewTtnResponse, Box<dyn std::error::Error>> {
@@ -249,10 +249,45 @@ pub struct CreateNewTtnPayload {
     cargo_type: String,
 }
 
+impl CreateNewTtnPayload {
+    pub fn new(
+        recipient: Recipient,
+        sender: Sender,
+        date_time: String,
+        payment_method: NovaPaymentMethod,
+        description: String,
+        cargos: Vec<Cargo>,
+        cargo_type: String,
+    ) -> Self {
+        if !cargos.len() > 1 {
+            panic!("YOU CANNOT SEND CARGO WITH 0 CARGOS");
+        }
+        CreateNewTtnPayload {
+            recipient,
+            sender,
+            date_time,
+            payment_method,
+            description,
+            cargos,
+            cargo_type,
+        }
+    }
+}
+
 pub struct Sender {
     city: String,
     warehouse_number: String,
     phone: String,
+}
+
+impl Sender {
+    pub fn new(city: String, warehouse_number: String, phone: String) -> Self {
+        Sender {
+            city,
+            warehouse_number,
+            phone,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -293,6 +328,26 @@ pub struct Recipient {
     address: Address,
 }
 
+impl Recipient {
+    pub fn new(
+        city: String,
+        first_name: String,
+        last_name: String,
+        phone: String,
+        is_payer: bool,
+        address: Address,
+    ) -> Self {
+        Recipient {
+            city,
+            first_name,
+            last_name,
+            phone,
+            is_payer,
+            address,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 pub struct Address {
@@ -331,53 +386,6 @@ impl Address {
             pochtomat_number: Some(pochtomat_number),
         }
     }
-}
-
-impl Recipient {
-    pub fn new(
-        city: String,
-        first_name: String,
-        last_name: String,
-        phone: String,
-        is_payer: bool,
-        address: Address,
-    ) -> Self {
-        Recipient {
-            city,
-            first_name,
-            last_name,
-            phone,
-            is_payer,
-            address,
-        }
-    }
-
-    // /// First argument this a counterparty, second contact counterparty
-    // async fn get_refs(
-    //     &self,
-    //     api: &NovaposhtaRaw,
-    // ) -> Result<(String, String), Box<dyn std::error::Error>> {
-    //     let response = api
-    //         .counterparty_create(
-    //             self.first_name.clone(),
-    //             self.last_name.clone(),
-    //             self.phone.clone(),
-    //             "Recipient".to_string(),
-    //             None,
-    //             self.middle_name.clone(),
-    //         )
-    //         .await?;
-    //     println!("{:#?}", response);
-    //     if response.success {
-    //         let data = response.data().unwrap();
-
-    //         let contact_person = data.ContactPerson.unwrap().data().unwrap();
-    //         return Ok((data.Ref.unwrap(), contact_person.Ref.unwrap()));
-    //     }
-    //     Err(Box::new(NovaRequestError::new(
-    //         "Novaposhta response not success".to_string(),
-    //     )))
-    // }
 }
 
 pub struct Cargo {
@@ -429,6 +437,42 @@ impl fmt::Display for NovaServiceType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Datelike;
     use dotenv::dotenv;
-    use std::vec;
+    use std::env;
+
+    #[tokio::test]
+    async fn create_ttn_test() {
+        dotenv().ok();
+        let nova = Novaposhta::default();
+        let date_time = {
+            let now = chrono::Local::now();
+            format!("{}.{}.{}", now.day(), now.month(), now.year())
+        };
+        let payload = CreateNewTtnPayload::new(
+            Recipient::new(
+                env::var("TEST_CITY").unwrap(),
+                env::var("TEST_FIRST_NAME").unwrap(),
+                env::var("TEST_LAST_NAME").unwrap(),
+                env::var("TEST_PHONE").unwrap(),
+                true,
+                Address::warehouse(14.to_string()),
+            ),
+            Sender::new(
+                env::var("TEST_CITY").unwrap(),
+                env::var("TEST_WAREHOUSE").unwrap(),
+                env::var("TEST_PHONE").unwrap(),
+            ),
+            date_time,
+            NovaPaymentMethod::Cash,
+            "Аксесуары".to_string(),
+            vec![Cargo::new(150, 0.5, None)],
+            "Parcel".to_string(),
+        );
+        let ttn_result = nova.create_ttn(payload).await.unwrap();
+        nova.raw
+            .internet_document_delete(vec![ttn_result.ttn_ref])
+            .await
+            .unwrap();
+    }
 }
