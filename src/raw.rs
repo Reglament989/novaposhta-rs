@@ -352,12 +352,15 @@ mod tests {
                 "Фелікс".to_owned(),
                 "Яковлєв".to_owned(),
                 "0997979789".to_owned(),
-                "Sender".to_string(),
+                "Recipient".to_string(),
                 None,
                 None,
             )
             .await
             .unwrap();
+        if !response.success {
+            println!("{:#?}", response);
+        }
         let data = response.data().unwrap();
         let contact_person = data.ContactPerson.unwrap().data().unwrap();
         assert_ne!(data.Ref, contact_person.Ref);
