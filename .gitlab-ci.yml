@@ -8,7 +8,7 @@ image: rust:latest
 stages:
 - test
 sast:
-  stage: test:cargo
+  stage: test
 
 cache:
   key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
