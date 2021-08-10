@@ -389,6 +389,7 @@ mod tests {
         println!("{:?}", contact_person.Ref)
     }
 
+    #[ignore = "Need alive ttn"]
     #[tokio::test]
     async fn get_status_documents_test() {
         dotenv().ok();
