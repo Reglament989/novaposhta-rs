@@ -15,4 +15,4 @@ include:
 test:cargo:
   script:
   - rustc --version && cargo --version
-  - cargo test --workspace --verbose
+  - cargo test --workspace -- --nocapture
