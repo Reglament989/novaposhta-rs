@@ -81,7 +81,6 @@ impl Novaposhta {
                     None,
                 )
                 .await?;
-            println!("{:#?}", response);
             let data = response.data().unwrap();
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
@@ -129,7 +128,6 @@ impl Novaposhta {
                     None,
                 )
                 .await?;
-            println!("{:#?}", response);
             let data = response.data().unwrap();
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
@@ -436,7 +434,7 @@ impl fmt::Display for NovaServiceType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Datelike;
+    use chrono::{Datelike, Duration};
     use dotenv::dotenv;
     use std::env;
 
@@ -445,7 +443,7 @@ mod tests {
         dotenv().ok();
         let nova = Novaposhta::default();
         let date_time = {
-            let now = chrono::Local::now();
+            let now = chrono::Local::today() + Duration::days(1);
             format!("{}.{}.{}", now.day(), now.month(), now.year())
         };
         let payload = CreateNewTtnPayload::new(
