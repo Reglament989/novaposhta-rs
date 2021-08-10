@@ -15,4 +15,5 @@ include:
 test:cargo:
   script:
   - rustc --version && cargo --version
-  - cargo test --workspace -- --nocapture
+  # - cargo test --workspace -- --nocapture
+  - cargo test --package novaposhta --lib -- tests::create_ttn_test --exact --nocapture
