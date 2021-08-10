@@ -259,7 +259,7 @@ impl CreateNewTtnPayload {
         cargos: Vec<Cargo>,
         cargo_type: String,
     ) -> Self {
-        if !cargos.len() > 0 {
+        if cargos.len() < 0 {
             panic!("YOU CANNOT SEND CARGO WITH 0 CARGOS");
         }
         CreateNewTtnPayload {
