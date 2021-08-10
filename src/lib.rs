@@ -128,6 +128,7 @@ impl Novaposhta {
                     None,
                 )
                 .await?;
+            println!("{:#?}", response);
             let data = response.data().unwrap();
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
