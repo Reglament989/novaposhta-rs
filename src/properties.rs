@@ -74,6 +74,15 @@ pub struct NovaDocument {
     pub Phone: String,
 }
 
+impl NovaDocument {
+    pub fn new(ttn: String, phone: String) -> Self {
+        NovaDocument {
+            DocumentNumber: ttn,
+            Phone: phone,
+        }
+    }
+}
+
 #[allow(non_snake_case)]
 #[derive(Serialize, Debug, Clone)]
 #[serde(default)]

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use properties::{NovaOptionsSeat, NovaRequestError};
+use properties::{NovaDocument, NovaOptionsSeat, NovaRequestError, NovaResponseData};
 use raw::NovaposhtaRaw;
 
 use serde::{Deserialize, Serialize};
@@ -259,6 +259,53 @@ impl Novaposhta {
         Err(Box::new(NovaRequestError::new(
             "Novaposhta response not success".to_string(),
         )))
+    }
+
+    /// # Example
+    /// ```rust
+    /// # async fn get_ttn() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use novaposhta::{Novaposhta};
+    ///     let nova = Novaposhta::default();
+    ///     let payload = vec![
+    ///         "TTN ref".to_string()
+    ///     ];
+    ///     nova.delete_ttn(payload).await?; // Always check if your document in delete list from response
+    /// #   Ok(())
+    /// # }
+    /// ```
+    /// For more info check <https://devcenter.novaposhta.ua/docs/services/556eef34a0fe4f02049c664e/operations/55701fa5a0fe4f0cf4fc53ec>
+    pub async fn delete_ttn(
+        &self,
+        ttn_ref: Vec<String>,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let mut deleted = vec![];
+        let response = self.raw.internet_document_delete(ttn_ref).await?.data;
+        for delete in response {
+            deleted.push(delete.Ref.unwrap());
+        }
+        Ok(deleted)
+    }
+
+    /// # Example
+    /// ```rust
+    /// # async fn get_ttn() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use novaposhta::{Novaposhta};
+    /// # use novaposhta::properties::NovaDocument;
+    ///     let nova = Novaposhta::default();
+    ///     let payload = vec![
+    ///         NovaDocument::new("Number ttn".to_string(), "Phone of sender or recipient".to_string()),
+    ///     ];
+    ///     nova.track_ttn(payload).await?;
+    /// #   Ok(())
+    /// # }
+    /// ```
+    /// For more info check <https://devcenter.novaposhta.ua/docs/services/556eef34a0fe4f02049c664e/operations/55702cbba0fe4f0cf4fc53ee>
+    pub async fn track_ttn(
+        &self,
+        ttns: Vec<NovaDocument>,
+    ) -> Result<Vec<NovaResponseData>, Box<dyn std::error::Error>> {
+        let data = self.raw.get_status_documents(ttns).await?.data;
+        Ok(data)
     }
 }
 
