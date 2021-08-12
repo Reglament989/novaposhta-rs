@@ -61,7 +61,7 @@ impl NovaposhtaRaw {
         Ok(response)
     }
 
-    /// For more info ref: https://devcenter.novaposhta.ua/docs/services/556d7ccaa0fe4f08e8f7ce43/operations/556d885da0fe4f08e8f7ce46
+    /// For more info ref: <https://devcenter.novaposhta.ua/docs/services/556d7ccaa0fe4f08e8f7ce43/operations/556d885da0fe4f08e8f7ce46>
     pub async fn get_cities(
         &self,
         city: Option<String>,
@@ -75,7 +75,7 @@ impl NovaposhtaRaw {
         Ok(resp)
     }
 
-    /// For more info ref:  https://devcenter.novaposhta.ua/docs/services/55702570a0fe4f0cf4fc53ed/operations/55702571a0fe4f0b64838913
+    /// For more info ref: <https://devcenter.novaposhta.ua/docs/services/55702570a0fe4f0cf4fc53ed/operations/55702571a0fe4f0b64838913>
     pub async fn get_types_of_payers(&self) -> Result<NovaResponse, Box<dyn std::error::Error>> {
         let props = Properties::default();
         // because getWarehouses works only with find.
@@ -85,7 +85,7 @@ impl NovaposhtaRaw {
         Ok(resp)
     }
 
-    /// For more info ref: https://devcenter.novaposhta.ua/docs/services/55702570a0fe4f0cf4fc53ed/operations/55702571a0fe4f0b64838909
+    /// For more info ref: <https://devcenter.novaposhta.ua/docs/services/55702570a0fe4f0cf4fc53ed/operations/55702571a0fe4f0b64838909>
     pub async fn get_cargo_types(&self) -> Result<NovaResponse, Box<dyn std::error::Error>> {
         let props = Properties::default();
         // because getWarehouses works only with find.
@@ -234,7 +234,7 @@ impl NovaposhtaRaw {
         let mut props = Properties::default();
         props.OptionsSeat = option_seats;
         props.RecipientAddress = recipient_address;
-        props.RecipientAddressName = recipient_address_name;
+        props.RecipientAddressName = recipient_address_name.or(warehouse_number);
         props.RecipientHouse = recipient_house_number;
         props.RecipientFlat = recipient_house_flat;
         props.NewAddress = Some("1".to_string());
@@ -254,9 +254,6 @@ impl NovaposhtaRaw {
         props.RecipientCityName = Some(recipient_city_name);
         props.RecipientArea = Some("".to_string());
         props.RecipientAreaRegions = Some("".to_string());
-        props.RecipientAddressName = warehouse_number;
-        props.RecipientHouse = Some("".to_string());
-        props.RecipientFlat = Some("".to_string());
         props.RecipientName = Some(recipient_full_name);
         props.RecipientType = Some("PrivatePerson".to_string());
         props.RecipientsPhone = Some(recipient_phone);

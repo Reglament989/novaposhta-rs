@@ -26,6 +26,34 @@ impl Default for Novaposhta {
 }
 
 impl Novaposhta {
+    /// ```rust
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// #    use chrono::{Datelike, Duration};
+    ///     let nova = Novaposhta::default();
+    ///     let date_time = {
+    ///         let now = chrono::Local::today() + Duration::days(1);
+    ///         format!("{}.{}.{}", now.day(), now.month(), now.year())
+    ///     };
+    ///     let payload = CreateNewTtnPayload::new(
+    ///         Recipient::new(
+    ///             "Киев",
+    ///             "имя",
+    ///             "фамилия",
+    ///             "номер телефона",
+    ///             true, // is_payer
+    ///             Address::warehouse(14.to_string()),
+    ///         ),
+    ///         Sender::new("Киев", "отделение", "номер телефона"),
+    ///         date_time, // Time of
+    ///         NovaPaymentMethod::Cash,
+    ///         "Аксесуары".to_string(),
+    ///         vec![Cargo::new(150, 0.5, None)],
+    ///         "Parcel".to_string(),
+    ///     );
+    ///     nova.create_ttn(payload).await?;
+    /// #    Ok(())
+    /// # }
+    /// ```
     pub async fn create_ttn(
         &self,
         payload: CreateNewTtnPayload,
@@ -36,18 +64,20 @@ impl Novaposhta {
             "Sender".to_string()
         };
         let cargo_props = payload.get_props();
-        let sender_city = self
-            .get_city_ref(payload.sender.city.clone())
-            .await
-            .unwrap();
+        let sender_city = self.get_city_ref(payload.sender.city.clone()).await?;
         let sender_props = self.get_first_sender().await?;
         let sender_address = self
             .get_warehouses_ref(
                 payload.sender.warehouse_number.clone(),
                 payload.sender.city.clone(),
             )
-            .await
-            .unwrap();
+            .await?;
+        let recipient_full_name = format!(
+            "{} {} {}",
+            payload.recipient.first_name,
+            payload.recipient.last_name,
+            payload.recipient.middle_name
+        );
         if payload.recipient.address.warehouse_number.is_some() {
             let service_type = NovaServiceType::WarehouseWarehouse;
             let response = self
@@ -68,10 +98,7 @@ impl Novaposhta {
                     payload.sender.phone,
                     payload.recipient.city,
                     payload.recipient.address.warehouse_number,
-                    format!(
-                        "{} {}",
-                        payload.recipient.first_name, payload.recipient.last_name
-                    ),
+                    recipient_full_name,
                     payload.recipient.phone,
                     payload.date_time,
                     None,
@@ -81,7 +108,7 @@ impl Novaposhta {
                     None,
                 )
                 .await?;
-            let data = response.data().unwrap();
+            let data = response.data()?;
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
                 ttn_ref: data.Ref.unwrap(),
@@ -115,10 +142,7 @@ impl Novaposhta {
                     payload.sender.phone,
                     payload.recipient.city,
                     None,
-                    format!(
-                        "{} {}",
-                        payload.recipient.first_name, payload.recipient.last_name
-                    ),
+                    recipient_full_name,
                     payload.recipient.phone,
                     payload.date_time,
                     Some(options),
@@ -128,7 +152,7 @@ impl Novaposhta {
                     None,
                 )
                 .await?;
-            let data = response.data().unwrap();
+            let data = response.data()?;
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
                 ttn_ref: data.Ref.unwrap(),
@@ -136,7 +160,7 @@ impl Novaposhta {
                 estimated_delivery_date: data.EstimatedDeliveryDate.unwrap(),
             });
         } else if payload.recipient.address.address_name.is_some() {
-            let service_type = NovaServiceType::WarehouseWarehouse;
+            let service_type = NovaServiceType::WarehouseDoors;
             let response = self
                 .raw
                 .internet_document_create_warehouse(
@@ -155,20 +179,17 @@ impl Novaposhta {
                     payload.sender.phone,
                     payload.recipient.city,
                     None,
-                    format!(
-                        "{} {}",
-                        payload.recipient.first_name, payload.recipient.last_name
-                    ),
+                    recipient_full_name,
                     payload.recipient.phone,
                     payload.date_time,
                     None,
                     None,
-                    Some(payload.recipient.address.address_name.unwrap()),
-                    Some(payload.recipient.address.address_house.unwrap()),
-                    Some(payload.recipient.address.address_flat.unwrap()),
+                    payload.recipient.address.address_name,
+                    payload.recipient.address.address_house,
+                    payload.recipient.address.address_flat,
                 )
                 .await?;
-            let data = response.data().unwrap();
+            let data = response.data()?;
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
                 ttn_ref: data.Ref.unwrap(),
@@ -278,11 +299,11 @@ pub struct Sender {
 }
 
 impl Sender {
-    pub fn new(city: String, warehouse_number: String, phone: String) -> Self {
+    pub fn new(city: &str, warehouse_number: &str, phone: &str) -> Self {
         Sender {
-            city,
-            warehouse_number,
-            phone,
+            city: city.to_owned(),
+            warehouse_number: warehouse_number.to_owned(),
+            phone: phone.to_owned(),
         }
     }
 }
@@ -319,6 +340,7 @@ impl CreateNewTtnPayload {
 pub struct Recipient {
     city: String,
     first_name: String,
+    middle_name: String,
     last_name: String,
     phone: String,
     is_payer: bool,
@@ -327,18 +349,20 @@ pub struct Recipient {
 
 impl Recipient {
     pub fn new(
-        city: String,
-        first_name: String,
-        last_name: String,
-        phone: String,
+        city: &str,
+        first_name: &str,
+        middle_name: Option<&str>,
+        last_name: &str,
+        phone: &str,
         is_payer: bool,
         address: Address,
     ) -> Self {
         Recipient {
-            city,
-            first_name,
-            last_name,
-            phone,
+            city: city.to_owned(),
+            first_name: first_name.to_owned(),
+            middle_name: middle_name.or(Some("")).unwrap().to_owned(),
+            last_name: last_name.to_owned(),
+            phone: phone.to_owned(),
             is_payer,
             address,
         }
@@ -356,31 +380,31 @@ pub struct Address {
 }
 
 impl Address {
-    pub fn warehouse(warehouse_number: String) -> Self {
+    pub fn warehouse(warehouse_number: i32) -> Self {
         Address {
-            warehouse_number: Some(warehouse_number),
+            warehouse_number: Some(warehouse_number.to_string()),
             address_name: None,
             address_house: None,
             address_flat: None,
             pochtomat_number: None,
         }
     }
-    pub fn address(address_name: String, address_house: String, address_flat: String) -> Self {
+    pub fn address(address_name: String, address_house: String, apartment_number: String) -> Self {
         Address {
             warehouse_number: None,
             address_name: Some(address_name),
             address_house: Some(address_house),
-            address_flat: Some(address_flat),
+            address_flat: Some(apartment_number),
             pochtomat_number: None,
         }
     }
-    pub fn pochtomat(pochtomat_number: String) -> Self {
+    pub fn pochtomat(pochtomat_number: i32) -> Self {
         Address {
             warehouse_number: None,
             address_name: None,
             address_house: None,
             address_flat: None,
-            pochtomat_number: Some(pochtomat_number),
+            pochtomat_number: Some(pochtomat_number.to_string()),
         }
     }
 }
@@ -448,17 +472,108 @@ mod tests {
         };
         let payload = CreateNewTtnPayload::new(
             Recipient::new(
-                env::var("TEST_CITY").unwrap(),
-                env::var("TEST_FIRST_NAME").unwrap(),
-                env::var("TEST_LAST_NAME").unwrap(),
-                env::var("TEST_PHONE").unwrap(),
+                env::var("TEST_CITY").unwrap().as_str(),
+                env::var("TEST_FIRST_NAME").unwrap().as_str(),
+                None,
+                env::var("TEST_LAST_NAME").unwrap().as_str(),
+                env::var("TEST_PHONE").unwrap().as_str(),
                 true,
-                Address::warehouse(14.to_string()),
+                Address::warehouse(14),
             ),
             Sender::new(
-                env::var("TEST_CITY").unwrap(),
-                env::var("TEST_WAREHOUSE").unwrap(),
-                env::var("TEST_PHONE").unwrap(),
+                env::var("TEST_CITY").unwrap().as_str(),
+                env::var("TEST_WAREHOUSE").unwrap().as_str(),
+                env::var("TEST_PHONE").unwrap().as_str(),
+            ),
+            date_time,
+            NovaPaymentMethod::Cash,
+            "Аксесуары".to_string(),
+            vec![Cargo::new(150, 0.5, None)],
+            "Parcel".to_string(),
+        );
+        let ttn_result = match nova.create_ttn(payload).await {
+            Ok(value) => value,
+            Err(error) => {
+                println!("{:#?}", error);
+                panic!("{}", error.to_string());
+            }
+        };
+
+        nova.raw
+            .internet_document_delete(vec![ttn_result.ttn_ref])
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn create_ttn_pochtomat_test() {
+        dotenv().ok();
+        let nova = Novaposhta::default();
+        let date_time = {
+            let now = chrono::Local::today() + Duration::days(1);
+            format!("{}.{}.{}", now.day(), now.month(), now.year())
+        };
+        let payload = CreateNewTtnPayload::new(
+            Recipient::new(
+                env::var("TEST_CITY").unwrap().as_str(),
+                env::var("TEST_FIRST_NAME").unwrap().as_str(),
+                None,
+                env::var("TEST_LAST_NAME").unwrap().as_str(),
+                env::var("TEST_PHONE").unwrap().as_str(),
+                true,
+                Address::pochtomat(6136),
+            ),
+            Sender::new(
+                env::var("TEST_CITY").unwrap().as_str(),
+                env::var("TEST_WAREHOUSE").unwrap().as_str(),
+                env::var("TEST_PHONE").unwrap().as_str(),
+            ),
+            date_time,
+            NovaPaymentMethod::Cash,
+            "Аксесуары".to_string(),
+            vec![Cargo::new(150, 0.5, Some(NovaOptionsSeat::default()))],
+            "Parcel".to_string(),
+        );
+        let ttn_result = match nova.create_ttn(payload).await {
+            Ok(value) => value,
+            Err(error) => {
+                println!("{:#?}", error);
+                panic!("{}", error.to_string());
+            }
+        };
+
+        nova.raw
+            .internet_document_delete(vec![ttn_result.ttn_ref])
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn create_ttn_address_test() {
+        dotenv().ok();
+        let nova = Novaposhta::default();
+        let date_time = {
+            let now = chrono::Local::today() + Duration::days(1);
+            format!("{}.{}.{}", now.day(), now.month(), now.year())
+        };
+        let payload = CreateNewTtnPayload::new(
+            Recipient::new(
+                env::var("TEST_CITY").unwrap().as_str(),
+                env::var("TEST_FIRST_NAME").unwrap().as_str(),
+                Some(env::var("TEST_MIDDLE_NAME").unwrap().as_str()),
+                env::var("TEST_LAST_NAME").unwrap().as_str(),
+                env::var("TEST_PHONE").unwrap().as_str(),
+                true,
+                Address::address(
+                    env::var("TEST_ADDRESS_NAME").unwrap(),
+                    env::var("TEST_ADDRESS_HOUSE").unwrap(),
+                    env::var("TEST_ADDRESS_FLAT").unwrap(),
+                ),
+            ),
+            Sender::new(
+                env::var("TEST_CITY").unwrap().as_str(),
+                env::var("TEST_WAREHOUSE").unwrap().as_str(),
+                env::var("TEST_PHONE").unwrap().as_str(),
             ),
             date_time,
             NovaPaymentMethod::Cash,

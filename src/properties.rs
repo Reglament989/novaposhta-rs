@@ -86,6 +86,37 @@ pub struct NovaOptionsSeat {
 }
 
 #[allow(non_snake_case)]
+impl NovaOptionsSeat {
+    pub fn new(
+        volumetricVolume: f32,
+        volumetricWidth: f32,
+        volumetricLenght: f32,
+        volumetricHeight: f32,
+        weight: f32,
+    ) -> Self {
+        NovaOptionsSeat {
+            volumetricVolume: volumetricVolume.to_string(),
+            volumetricWidth: volumetricWidth.to_string(),
+            volumetricLength: volumetricLenght.to_string(),
+            volumetricHeight: volumetricHeight.to_string(),
+            weight: weight.to_string(),
+        }
+    }
+}
+
+impl Default for NovaOptionsSeat {
+    fn default() -> Self {
+        NovaOptionsSeat {
+            volumetricVolume: 0.5.to_string(),
+            volumetricWidth: 20.to_string(),
+            volumetricLength: 20.to_string(),
+            volumetricHeight: 5.to_string(),
+            weight: 0.5.to_string(),
+        }
+    }
+}
+
+#[allow(non_snake_case)]
 #[derive(Serialize, Debug)]
 pub struct NovaRequest {
     pub modelName: String,
@@ -124,9 +155,11 @@ impl NovaResponse {
         let d = self.data.clone();
         let returnable = d.first();
         if returnable.is_none() {
-            return Err(NovaRequestError::new(
+            return Err(NovaRequestError::new(format!(
+                "{} {:#?}",
                 "NovaResponseData with lenght 0".to_owned(),
-            ));
+                self.errors
+            )));
         }
         Ok(returnable.unwrap().clone())
     }
