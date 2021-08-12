@@ -27,8 +27,9 @@ impl Default for Novaposhta {
 
 impl Novaposhta {
     /// ```rust
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// #    use chrono::{Datelike, Duration};
+    /// # async fn get_ttn() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use chrono::{Datelike, Duration};
+    /// # use novaposhta::{NovaPaymentMethod, Novaposhta, CreateNewTtnPayload, Cargo, Address, Recipient, Sender};
     ///     let nova = Novaposhta::default();
     ///     let date_time = {
     ///         let now = chrono::Local::today() + Duration::days(1);
@@ -38,10 +39,11 @@ impl Novaposhta {
     ///         Recipient::new(
     ///             "Киев",
     ///             "имя",
+    ///             Some("отчество"),
     ///             "фамилия",
     ///             "номер телефона",
     ///             true, // is_payer
-    ///             Address::warehouse(14.to_string()),
+    ///             Address::warehouse(14),
     ///         ),
     ///         Sender::new("Киев", "отделение", "номер телефона"),
     ///         date_time, // Time of
