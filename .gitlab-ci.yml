@@ -30,7 +30,7 @@ pages:
   stage: doc
   script:
     - cargo doc --no-deps
-    - mv target/doc public
+    - mv target/doc/novaposhta public
     - echo '<meta http-equiv="refresh" content="0; url={{ LIBRARY NAME }}">' > public/index.html
   artifacts:
     paths:
