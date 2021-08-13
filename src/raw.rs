@@ -1,4 +1,6 @@
-use crate::properties::{NovaOptionsSeat, NovaRequest, NovaResponse, Properties};
+use crate::properties::{
+    BackwardDeliveryData, NovaOptionsSeat, NovaRequest, NovaResponse, Properties,
+};
 
 use crate::properties::{NovaDocument, NovaRedeliveryCalculate};
 use reqwest::Client;
@@ -230,8 +232,10 @@ impl NovaposhtaRaw {
         recipient_address_name: Option<String>,
         recipient_house_number: Option<String>,
         recipient_house_flat: Option<String>,
+        backward_delivery_data: Option<BackwardDeliveryData>,
     ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
         let mut props = Properties::default();
+        props.BackwardDeliveryData = backward_delivery_data;
         props.OptionsSeat = option_seats;
         props.RecipientAddress = recipient_address;
         props.RecipientAddressName = recipient_address_name.or(warehouse_number);

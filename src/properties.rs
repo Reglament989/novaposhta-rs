@@ -64,6 +64,51 @@ pub struct Properties {
     pub RecipientName: Option<String>,
     pub RecipientType: Option<String>,
     pub Counterparty: Option<String>,
+    pub BackwardDeliveryData: Option<BackwardDeliveryData>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Debug)]
+pub struct BackwardDeliveryData {
+    pub PayerType: NovaPayerType,
+    pub CargoType: NovaBackwardCargo,
+    pub RedeliveryString: String,
+}
+
+impl BackwardDeliveryData {
+    pub fn money(amount: i32) -> Self {
+        BackwardDeliveryData {
+            PayerType: NovaPayerType::Recipient,
+            CargoType: NovaBackwardCargo::Money,
+            RedeliveryString: amount.to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub enum NovaPayerType {
+    Sender,
+    Recipient,
+}
+
+impl fmt::Display for NovaPayerType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub enum NovaBackwardCargo {
+    Money,
+    // CreditDocuments,
+    // SignedDocuments,
+    // Documents
+}
+
+impl fmt::Display for NovaBackwardCargo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[allow(non_snake_case)]

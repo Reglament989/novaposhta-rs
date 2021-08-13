@@ -1,6 +1,8 @@
 use std::fmt;
 
-use properties::{NovaDocument, NovaOptionsSeat, NovaRequestError, NovaResponseData};
+use properties::{
+    BackwardDeliveryData, NovaDocument, NovaOptionsSeat, NovaRequestError, NovaResponseData,
+};
 use raw::NovaposhtaRaw;
 
 use serde::{Deserialize, Serialize};
@@ -30,6 +32,7 @@ impl Novaposhta {
     /// # async fn get_ttn() -> Result<(), Box<dyn std::error::Error>> {
     /// # use chrono::{Datelike, Duration};
     /// # use novaposhta::{NovaPaymentMethod, Novaposhta, CreateNewTtnPayload, Cargo, Address, Recipient, Sender};
+    /// # use novaposhta::properties::BackwardDeliveryData;
     ///     let nova = Novaposhta::default();
     ///     let date_time = {
     ///         let now = chrono::Local::today() + Duration::days(1);
@@ -51,6 +54,7 @@ impl Novaposhta {
     ///         "Аксесуары".to_string(),
     ///         vec![Cargo::new(150, 0.5, None)],
     ///         "Parcel".to_string(),
+    ///         Some(BackwardDeliveryData::money(150)),
     ///     );
     ///     nova.create_ttn(payload).await?;
     /// #    Ok(())
@@ -108,6 +112,7 @@ impl Novaposhta {
                     None,
                     None,
                     None,
+                    payload.backward_delivery,
                 )
                 .await?;
             let data = response.data()?;
@@ -152,6 +157,7 @@ impl Novaposhta {
                     None,
                     None,
                     None,
+                    payload.backward_delivery,
                 )
                 .await?;
             let data = response.data()?;
@@ -189,6 +195,7 @@ impl Novaposhta {
                     payload.recipient.address.address_name,
                     payload.recipient.address.address_house,
                     payload.recipient.address.address_flat,
+                    payload.backward_delivery,
                 )
                 .await?;
             let data = response.data()?;
@@ -317,6 +324,7 @@ pub struct CreateNewTtnPayload {
     description: String,
     cargos: Vec<Cargo>,
     cargo_type: String,
+    backward_delivery: Option<BackwardDeliveryData>,
 }
 
 impl CreateNewTtnPayload {
@@ -328,6 +336,7 @@ impl CreateNewTtnPayload {
         description: String,
         cargos: Vec<Cargo>,
         cargo_type: String,
+        backward_delivery: Option<BackwardDeliveryData>,
     ) -> Self {
         CreateNewTtnPayload {
             recipient,
@@ -337,6 +346,7 @@ impl CreateNewTtnPayload {
             description,
             cargos,
             cargo_type,
+            backward_delivery,
         }
     }
 }
@@ -539,6 +549,7 @@ mod tests {
             "Аксесуары".to_string(),
             vec![Cargo::new(150, 0.5, None)],
             "Parcel".to_string(),
+            None,
         );
         let ttn_result = match nova.create_ttn(payload).await {
             Ok(value) => value,
@@ -582,6 +593,7 @@ mod tests {
             "Аксесуары".to_string(),
             vec![Cargo::new(150, 0.5, Some(NovaOptionsSeat::default()))],
             "Parcel".to_string(),
+            Some(BackwardDeliveryData::money(150)),
         );
         let ttn_result = match nova.create_ttn(payload).await {
             Ok(value) => value,
@@ -629,6 +641,7 @@ mod tests {
             "Аксесуары".to_string(),
             vec![Cargo::new(150, 0.5, None)],
             "Parcel".to_string(),
+            None,
         );
         let ttn_result = match nova.create_ttn(payload).await {
             Ok(value) => value,
