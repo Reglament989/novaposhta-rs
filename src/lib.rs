@@ -160,6 +160,7 @@ impl Novaposhta {
                     payload.backward_delivery,
                 )
                 .await?;
+            println!("{:#?}", response);
             let data = response.data()?;
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
@@ -324,7 +325,7 @@ pub struct CreateNewTtnPayload {
     description: String,
     cargos: Vec<Cargo>,
     cargo_type: String,
-    backward_delivery: Option<BackwardDeliveryData>,
+    backward_delivery: Option<Vec<BackwardDeliveryData>>,
 }
 
 impl CreateNewTtnPayload {
@@ -336,7 +337,7 @@ impl CreateNewTtnPayload {
         description: String,
         cargos: Vec<Cargo>,
         cargo_type: String,
-        backward_delivery: Option<BackwardDeliveryData>,
+        backward_delivery: Option<Vec<BackwardDeliveryData>>,
     ) -> Self {
         CreateNewTtnPayload {
             recipient,

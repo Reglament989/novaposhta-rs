@@ -232,7 +232,7 @@ impl NovaposhtaRaw {
         recipient_address_name: Option<String>,
         recipient_house_number: Option<String>,
         recipient_house_flat: Option<String>,
-        backward_delivery_data: Option<BackwardDeliveryData>,
+        backward_delivery_data: Option<Vec<BackwardDeliveryData>>,
     ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
         let mut props = Properties::default();
         props.BackwardDeliveryData = backward_delivery_data;

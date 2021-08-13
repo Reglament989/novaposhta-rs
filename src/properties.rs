@@ -1,4 +1,4 @@
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, vec};
 
 use serde::{Deserialize, Serialize};
 
@@ -64,7 +64,7 @@ pub struct Properties {
     pub RecipientName: Option<String>,
     pub RecipientType: Option<String>,
     pub Counterparty: Option<String>,
-    pub BackwardDeliveryData: Option<BackwardDeliveryData>,
+    pub BackwardDeliveryData: Option<Vec<BackwardDeliveryData>>,
 }
 
 #[allow(non_snake_case)]
@@ -76,12 +76,12 @@ pub struct BackwardDeliveryData {
 }
 
 impl BackwardDeliveryData {
-    pub fn money(amount: i32) -> Self {
-        BackwardDeliveryData {
+    pub fn money(amount: i32) -> Vec<BackwardDeliveryData> {
+        vec![BackwardDeliveryData {
             PayerType: NovaPayerType::Recipient,
             CargoType: NovaBackwardCargo::Money,
             RedeliveryString: amount.to_string(),
-        }
+        }]
     }
 }
 
