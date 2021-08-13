@@ -7,7 +7,6 @@ documentation = "https://tokyjo.gitlab.io/novaposhta-rs"
 repository = "https://gitlab.com/tokyjo/novaposhta-rs"
 homepage = "https://gitlab.com/tokyjo/novaposhta-rs"
 readme = "Readme.md"
-license = "MIT"
 license-file = "LICENSE"
 keywords = ["api", "novaposhta", "http"]
 categories = ["accessibility", "api-bindings", "asynchronous"]
