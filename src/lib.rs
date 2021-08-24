@@ -429,7 +429,7 @@ impl Recipient {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(default)]
 pub struct Address {
     pub warehouse_number: Option<String>,
