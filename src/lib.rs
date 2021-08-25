@@ -8,6 +8,7 @@ use raw::NovaposhtaRaw;
 use serde::{Deserialize, Serialize};
 pub mod properties;
 pub mod raw;
+pub mod db;
 
 pub struct Novaposhta {
     pub raw: NovaposhtaRaw,
