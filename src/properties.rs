@@ -52,6 +52,8 @@ pub struct Properties {
     pub RecipientsPhone: Option<String>,
     // need be d.M.Y
     pub DateTime: Option<String>,
+    pub DateTimeFrom: Option<String>,
+    pub DateTimeTo: Option<String>,
     pub Documents: Option<Vec<NovaDocument>>,
     pub DocumentRefs: Option<Vec<String>>,
     pub RedeliveryCalculate: Option<NovaRedeliveryCalculate>,
@@ -220,9 +222,17 @@ impl NovaResponse {
 }
 
 #[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug, Default ,Clone)]
+pub struct DeliveryDate {
+    pub date: String,
+}
+
+
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(default)]
 pub struct NovaResponseData {
+    pub DeliveryDate: Option<DeliveryDate>,
     pub FirstName: Option<String>,
     pub MiddleName: Option<String>,
     pub LastName: Option<String>,

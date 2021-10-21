@@ -1,3 +1,4 @@
+use crate::NovaServiceType;
 use crate::properties::{
     BackwardDeliveryData, NovaOptionsSeat, NovaRequest, NovaResponse, Properties,
 };
@@ -313,6 +314,47 @@ impl NovaposhtaRaw {
             .await?;
         Ok(resp)
     }
+
+    pub async fn get_document_list(&self, date_time_to: Option<String>, date_time_from: Option<String>) -> Result<NovaResponse, Box<dyn std::error::Error>> {
+        let mut props = Properties::default();
+        props.DateTimeTo = date_time_to;
+        props.DateTimeFrom = date_time_from;
+
+        let resp = self.build_request("InternetDocument", "getDocumentList", props).await?;
+        Ok(resp)
+    }
+
+    /// DeliveryDate returns
+    pub async fn get_document_delivery_date(&self, send_date: String, service_type: NovaServiceType, city_sender_ref: String, city_recipient_ref: String) -> Result<NovaResponse, Box<dyn std::error::Error>> {
+        let mut props = Properties::default();
+
+        props.DateTime = Some(send_date);
+        props.ServiceType = Some(service_type.to_string());
+        props.CitySender = Some(city_sender_ref);
+        props.CityRecipient = Some(city_recipient_ref);
+
+        let resp = self.build_request("InternetDocument", "getDocumentDeliveryDate", props).await?;
+        
+        Ok(resp)
+    }
+
+    pub async fn registry_insert(&self, document_refs: Vec<String>, add_to_exists_registy: Option<String>) -> Result<NovaResponse, Box<dyn std::error::Error>> {
+        let mut props = Properties::default();
+
+        props.DocumentRefs = Some(document_refs);
+        props.Ref = add_to_exists_registy;
+
+        let resp = self.build_request("ScanSheet", "insertDocuments", props).await?;
+        
+        Ok(resp)
+    }
+
+    pub async fn registry_print_link(&self, registery_ref: String) -> String {
+        format!("https://my.novaposhta.ua/scanSheet/printScanSheet/refs[]/{}/type/pdf/apiKey/{}", registery_ref, self.api_key)
+    }
+    pub async fn ttn_print_link(&self, ttns: Vec<String>) -> String {
+        format!("https://my.novaposhta.ua/orders/printDocument/orders[]/{}/type/pdf/apiKey/{}", ttns.join(","), self.api_key)
+    } 
 }
 
 #[cfg(test)]
@@ -321,6 +363,7 @@ mod tests {
     use std::{env, vec};
 
     use super::*;
+    use chrono::{Datelike, Duration};
     use dotenv::dotenv;
 
     #[tokio::test]
@@ -438,6 +481,36 @@ mod tests {
         let cost_delivery = data.Cost.unwrap();
         let cost_redelivery = data.CostRedelivery.unwrap();
         println!("{:?}", cost_delivery + cost_redelivery);
+    }
+
+    #[tokio::test]
+    async fn get_document_list_test() {
+        dotenv().ok();
+        let nova = NovaposhtaRaw::default();
+        let mut response = nova
+            .get_document_list(None, None)
+            .await
+            .unwrap();
+        if response.success {
+            println!("{:?}", response.data.pop());
+        };
+    }
+
+    #[tokio::test]
+    async fn get_document_delivery_date_test() {
+        dotenv().ok();
+        let nova = NovaposhtaRaw::default();
+        let date_time = {
+            let now = chrono::Local::today() + Duration::days(1);
+            format!("{}.{}.{}", now.day(), now.month(), now.year())
+        };
+        let mut response = nova
+            .get_document_delivery_date(date_time, NovaServiceType::WarehouseWarehouse, KHARKIV_REF.to_string(), KHARKIV_REF.to_string())
+            .await
+            .unwrap();
+        if response.success {
+            println!("{:?}", response.data.pop());
+        };
     }
 
     #[tokio::test]
