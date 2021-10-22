@@ -1,131 +1,159 @@
-use crate::NovaServiceType;
-use crate::properties::{
-    BackwardDeliveryData, NovaOptionsSeat, NovaRequest, NovaResponse, Properties,
+use crate::{
+    error::NovaRequestError,
+    types::{
+        NovaDeliveryDate, NovaDocumentPrice, NovaScanSheetCreate, NovaTTNFromList, NovaTime,
+        ScanSheetListItem, ScanSheetRefsDelete,
+    },
+};
+use log::debug;
+use reqwest::Client;
+use serde::de::DeserializeOwned;
+use serde_json::{json, Value};
+
+use crate::types::{
+    Cargo, CargoSplit, NovaCity, NovaCounterParties, NovaDocument, NovaReferenceBooks, NovaRequest,
+    NovaResponse, NovaServiceType, NovaTTN, NovaTTNCreate, NovaTTNDelete, NovaWarehouse, Recipient,
+    Sender,
 };
 
-use crate::properties::{NovaDocument, NovaRedeliveryCalculate};
-use reqwest::Client;
-
-pub struct NovaposhtaRaw {
+pub struct Novaposhta {
     api_key: String,
     client: Client,
 }
 
-impl NovaposhtaRaw {
+impl Novaposhta {
     pub fn new(api_key: String) -> Self {
         let client = Client::new();
-        NovaposhtaRaw { client, api_key }
+        Novaposhta { client, api_key }
     }
 }
 
-impl Default for NovaposhtaRaw {
+impl Default for Novaposhta {
     fn default() -> Self {
         let client = Client::new();
-        NovaposhtaRaw {
+        Novaposhta {
             client,
             api_key: std::env::var("NOVAPOSHTA_KEY").unwrap(),
         }
     }
 }
 
-impl NovaposhtaRaw {
-    pub async fn build_request(
+impl Novaposhta {
+    pub async fn build_request<T>(
         &self,
         model: &str,
         method: &str,
-        properties: Properties,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let payload = NovaRequest::new(
-            method.to_owned(),
-            model.to_owned(),
-            properties,
-            self.api_key.to_owned(),
+        payload: serde_json::Value,
+    ) -> Result<NovaResponse<T>, Box<dyn std::error::Error>>
+    where
+        T: DeserializeOwned + Clone,
+    {
+        let payload: NovaRequest = NovaRequest::new(
+            method.to_string(),
+            model.to_string(),
+            payload,
+            self.api_key.clone(),
         );
-        // BECAUSE THIS FUCKING DEVELOPERS FROM NP DOES NOT MIND OF DOCUMENTATION AND INSTEAD OF INT THEY GIVE STRING
-        // use serde_json::Value;
-        // use std::collections::HashMap;
-        // let response1 = self
-        //     .client
-        //     .post("https://api.novaposhta.ua/v2.0/json/")
-        //     .json(&payload)
-        //     .send()
-        //     .await?
-        //     .json::<HashMap<String, Value>>()
-        //     .await?;
-        // println!("{:#?}", response1);
-        let response: NovaResponse = self
+        let response: NovaResponse<Value> = self
             .client
             .post("https://api.novaposhta.ua/v2.0/json/")
             .json(&payload)
             .send()
             .await?
-            .json::<NovaResponse>()
+            .json::<NovaResponse<Value>>()
             .await?;
-        Ok(response)
+        debug!("{:#?}", response);
+        if response.success {
+            // Exists better way but im dont know
+            let return_value: NovaResponse<T> = NovaResponse {
+                success: response.success,
+                errors: response.errors,
+                warnings: response.warnings,
+                data: response
+                    .data
+                    .into_iter()
+                    .map(|d| serde_json::from_value::<T>(d).unwrap())
+                    .collect(),
+            };
+            Ok(return_value)
+        } else {
+            Err(Box::new(NovaRequestError::new(format!(
+                "{:#?}",
+                response.errors
+            ))))
+        }
     }
 
-    /// For more info ref: <https://devcenter.novaposhta.ua/docs/services/556d7ccaa0fe4f08e8f7ce43/operations/556d885da0fe4f08e8f7ce46>
     pub async fn get_cities(
         &self,
         city: Option<String>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
+    ) -> Result<NovaResponse<NovaCity>, Box<dyn std::error::Error>> {
         // because getWarehouses works only with find.
-        props.FindByString = city;
-        let resp = self
-            .build_request("AddressGeneral", "getCities", props)
+        let resp: NovaResponse<NovaCity> = self
+            .build_request(
+                "AddressGeneral",
+                "getCities",
+                json!({ "FindByString": city }),
+            )
             .await?;
         Ok(resp)
     }
 
-    /// For more info ref: <https://devcenter.novaposhta.ua/docs/services/55702570a0fe4f0cf4fc53ed/operations/55702571a0fe4f0b64838913>
-    pub async fn get_types_of_payers(&self) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let props = Properties::default();
-        // because getWarehouses works only with find.
+    pub async fn get_types_of_payers(
+        &self,
+    ) -> Result<NovaResponse<NovaReferenceBooks>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("Common", "getTypesOfPayers", props)
+            .build_request("Common", "getTypesOfPayers", json!({}))
             .await?;
         Ok(resp)
     }
 
-    /// For more info ref: <https://devcenter.novaposhta.ua/docs/services/55702570a0fe4f0cf4fc53ed/operations/55702571a0fe4f0b64838909>
-    pub async fn get_cargo_types(&self) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let props = Properties::default();
-        // because getWarehouses works only with find.
-        let resp = self.build_request("Common", "getCargoTypes", props).await?;
+    pub async fn get_cargo_types(
+        &self,
+    ) -> Result<NovaResponse<NovaReferenceBooks>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request("Common", "getCargoTypes", json!({}))
+            .await?;
         Ok(resp)
     }
 
     pub async fn get_types_of_payers_for_redelivery(
         &self,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let props = Properties::default();
-        // because getWarehouses works only with find.
+    ) -> Result<NovaResponse<NovaReferenceBooks>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("Common", "getTypesOfPayersForRedelivery", props)
+            .build_request("Common", "getTypesOfPayersForRedelivery", json!({}))
             .await?;
         Ok(resp)
     }
 
-    pub async fn get_service_types(&self) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let props = Properties::default();
-        // because getWarehouses works only with find.
+    pub async fn get_service_types(
+        &self,
+    ) -> Result<NovaResponse<NovaReferenceBooks>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("Common", "getServiceTypes", props)
+            .build_request("Common", "getServiceTypes", json!({}))
             .await?;
         Ok(resp)
     }
 
     pub async fn get_warehouses(
         &self,
-        city_ref: Option<String>,
-        city_name: Option<String>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.CityRef = city_ref;
-        props.CityName = city_name;
+        city: Option<String>,
+        warehouse: Option<String>,
+    ) -> Result<NovaResponse<NovaWarehouse>, Box<dyn std::error::Error>> {
+        let payload: Value;
+        match city {
+            Some(find) => {
+                let is_uuid = uuid::Uuid::parse_str(&find).is_ok();
+                if is_uuid {
+                    payload = json!({ "CityRef": find, "FindByString": warehouse });
+                } else {
+                    payload = json!({ "CityName": find, "FindByString": warehouse });
+                }
+            }
+            None => payload = json!({ "FindByString": warehouse }),
+        }
         let resp = self
-            .build_request("AddressGeneral", "getWarehouses", props)
+            .build_request("AddressGeneral", "getWarehouses", payload)
             .await?;
         Ok(resp)
     }
@@ -133,46 +161,31 @@ impl NovaposhtaRaw {
     pub async fn get_status_documents(
         &self,
         documents: Vec<NovaDocument>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.Documents = Some(documents);
+    ) -> Result<NovaResponse<NovaTTN>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("TrackingDocument", "getStatusDocuments", props)
+            .build_request(
+                "TrackingDocument",
+                "getStatusDocuments",
+                json!({ "Documents": documents }),
+            )
             .await?;
-        Ok(resp)
-    }
-
-    pub async fn counterparty_create(
-        &self,
-        first_name: String,
-        last_name: String,
-        phone: String,
-        counterparty_type: String,
-        email: Option<String>,
-        middle_name: Option<String>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.FirstName = Some(first_name);
-        props.LastName = Some(last_name);
-        props.Phone = Some(phone);
-        props.MiddleName = middle_name;
-        props.Email = email;
-        props.CounterpartyType = Some("PrivatePerson".to_owned());
-        props.CounterpartyProperty = Some(counterparty_type.to_owned());
-        let resp = self.build_request("Counterparty", "save", props).await?;
         Ok(resp)
     }
 
     pub async fn counterparty_search(
         &self,
         search_string: Option<String>,
-        counterparty_type: String,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.FindByString = search_string;
-        props.CounterpartyProperty = Some(counterparty_type.to_owned());
+        counterparty_type: &str,
+    ) -> Result<NovaResponse<NovaCounterParties>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("Counterparty", "getCounterparties", props)
+            .build_request(
+                "Counterparty",
+                "getCounterparties",
+                json!({
+                    "CounterpartyProperty": counterparty_type,
+                    "FindByString": search_string
+                }),
+            )
             .await?;
         Ok(resp)
     }
@@ -180,372 +193,448 @@ impl NovaposhtaRaw {
     pub async fn get_counterparty_contact_persons(
         &self,
         counterparty_ref: String,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.Ref = Some(counterparty_ref);
+    ) -> Result<NovaResponse<NovaCounterParties>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("Counterparty", "getCounterpartyContactPersons", props)
+            .build_request(
+                "Counterparty",
+                "getCounterpartyContactPersons",
+                json!({ "Ref": counterparty_ref }),
+            )
             .await?;
         Ok(resp)
     }
 
-    /// No needed because counterparty_create returns this request into in field ContactPerson.
-    pub async fn contact_person_create(
+    pub async fn internet_document_create(
         &self,
-        first_name: String,
-        last_name: String,
-        phone: String,
-        counterparty_ref: String,
-        middle_name: Option<String>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.FirstName = Some(first_name);
-        props.LastName = Some(last_name);
-        props.Phone = Some(phone);
-        props.MiddleName = middle_name.or(Some("".to_owned()));
-        props.CounterpartyRef = Some(counterparty_ref);
-        let resp = self.build_request("ContactPerson", "save", props).await?;
-        Ok(resp)
-    }
-
-    pub async fn internet_document_create_warehouse(
-        &self,
-        payer_type: String,
-        payment_method: String,
-        cargo_type: String,
-        weight: f32,
-        service_type: String,
-        seats_amount: i32,
-        description: String,
-        cost: i32,
-        city_sender: String,
-        sender: String,
-        sender_address: String,
-        contact_sender: String,
-        senders_phone: String,
-        recipient_city_name: String,
-        warehouse_number: Option<String>,
-        recipient_full_name: String,
-        recipient_phone: String,
-        date_time: String,
-        option_seats: Option<Vec<NovaOptionsSeat>>,
-        recipient_address: Option<String>,
-        recipient_address_name: Option<String>,
-        recipient_house_number: Option<String>,
-        recipient_house_flat: Option<String>,
-        backward_delivery_data: Option<Vec<BackwardDeliveryData>>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.BackwardDeliveryData = backward_delivery_data;
-        props.OptionsSeat = option_seats;
-        props.RecipientAddress = recipient_address;
-        props.RecipientAddressName = recipient_address_name.or(warehouse_number);
-        props.RecipientHouse = recipient_house_number;
-        props.RecipientFlat = recipient_house_flat;
-        props.NewAddress = Some("1".to_string());
-        props.PayerType = Some(payer_type);
-        props.PaymentMethod = Some(payment_method);
-        props.CargoType = Some(cargo_type);
-        props.Weight = Some(weight.to_string());
-        props.ServiceType = Some(service_type);
-        props.SeatsAmount = Some(seats_amount.to_string());
-        props.Description = Some(description);
-        props.Cost = Some(cost.to_string());
-        props.CitySender = Some(city_sender);
-        props.Sender = Some(sender);
-        props.SenderAddress = Some(sender_address);
-        props.ContactSender = Some(contact_sender);
-        props.SendersPhone = Some(senders_phone);
-        props.RecipientCityName = Some(recipient_city_name);
-        props.RecipientArea = Some("".to_string());
-        props.RecipientAreaRegions = Some("".to_string());
-        props.RecipientName = Some(recipient_full_name);
-        props.RecipientType = Some("PrivatePerson".to_string());
-        props.RecipientsPhone = Some(recipient_phone);
-        props.DateTime = Some(date_time);
-
+        recipient: Recipient,
+        sender: Sender,
+        cargos: Vec<Cargo>,
+        date_of_send: chrono::DateTime<chrono::Local>,
+    ) -> Result<NovaResponse<NovaTTNCreate>, Box<dyn std::error::Error>> {
+        let seats_amount = cargos.len();
+        let (weight, price, to_payment, description) = cargos.into_ttn_values();
+        let payer = if recipient.is_payer {
+            "Recipient"
+        } else {
+            "Sender"
+        };
+        let (sender_ref, sender_contact_ref) = {
+            let sender = self.counterparty_search(None, "Sender").await?;
+            let sender_contact = self
+                .get_counterparty_contact_persons(sender.data().clone().unwrap().Ref)
+                .await?;
+            (
+                sender.data().unwrap().Ref,
+                sender_contact.data().unwrap().Ref,
+            )
+        };
+        let backward_delivery = if to_payment > 0 {
+            vec![json!({
+                "PayerType": "Recipient",
+                "CargoType": "Money",
+                "RedeliveryString": to_payment
+            })]
+        } else {
+            vec![json!({})]
+        };
+        let payload = json!({
+            "NewAddress": "1",
+            "PayerType": payer,
+            "Weight": weight,
+            "CargoType": "Parcel",
+            "ServiceType": recipient.address.service_type,
+            "SeatsAmount": seats_amount,
+            "Description": description,
+            "Cost": price,
+            "CitySender": sender.city_ref,
+            "SenderAddress": sender.warehouse_ref,
+            "Sender": sender_ref,
+            "ContactSender": sender_contact_ref,
+            "SendersPhone": sender.phone,
+            "RecipientAddressName": recipient.address.address_name.unwrap_or(recipient.address.warehouse_number.unwrap()),
+            "RecipientHouse": recipient.address.address_house,
+            "RecipientFlat": recipient.address.address_flat,
+            "RecipientCityName": recipient.city_name,
+            "RecipientName": recipient.full_name,
+            "RecipientType": "PrivatePerson",
+            "RecipientsPhone": recipient.phone,
+            "DateTime": date_of_send.into_ttn_time(),
+            "PaymentMethod": "Cash",
+            "BackwardDeliveryData": backward_delivery
+        });
         let resp = self
-            .build_request("InternetDocument", "save", props)
+            .build_request("InternetDocument", "save", payload)
             .await?;
         Ok(resp)
     }
 
     pub async fn internet_document_delete(
         &self,
-        document_ref: Vec<String>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.DocumentRefs = Some(document_ref);
+        document_refs: Vec<String>,
+    ) -> Result<NovaResponse<NovaTTNDelete>, Box<dyn std::error::Error>> {
         let resp = self
-            .build_request("InternetDocument", "delete", props)
+            .build_request(
+                "InternetDocument",
+                "delete",
+                json!({ "DocumentRefs": document_refs }),
+            )
             .await?;
         Ok(resp)
     }
 
     pub async fn get_document_price(
         &self,
-        city_sender_ref: String,
-        city_recipient_ref: String,
-        weight: String,
-        service_type: String,
-        cost_of_parcel: String,
-        cargo_type: String,
-        seats_amount: String,
-        date_time: Option<String>,
-        redelivery_calculate: Option<NovaRedeliveryCalculate>,
-        // pack_count: Option<i32>,
-        // pack_ref: Option<i32>,
-        // amount: Option<i32>,
-        // cargo_details: Option<String>,
-    ) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.CitySender = Some(city_sender_ref);
-        props.CityRecipient = Some(city_recipient_ref);
-        props.Weight = Some(weight);
-        props.ServiceType = Some(service_type);
-        props.Cost = Some(cost_of_parcel);
-        props.CargoType = Some(cargo_type);
-        props.SeatsAmount = Some(seats_amount);
-        props.RedeliveryCalculate = redelivery_calculate;
-        props.DateTime = date_time;
+        sender_city_ref: String,
+        recipient_city_ref: String,
+        service_type: NovaServiceType,
+        cargos: Vec<Cargo>,
+    ) -> Result<NovaResponse<NovaDocumentPrice>, Box<dyn std::error::Error>> {
+        let seats_amount = cargos.len();
+        let (weight, price, to_payment, _) = cargos.into_ttn_values();
+
+        let redelivery_calculate = if to_payment > 0 {
+            json!({
+                "CargoType": "Money",
+                "Amount": to_payment
+            })
+        } else {
+            json!({})
+        };
+
+        let now = chrono::Local::now();
 
         let resp = self
-            .build_request("InternetDocument", "getDocumentPrice", props)
+            .build_request(
+                "InternetDocument",
+                "getDocumentPrice",
+                json!({
+                    "CitySender": sender_city_ref,
+                    "CityRecipient": recipient_city_ref,
+                    "Weight": weight,
+                    "ServiceType": service_type,
+                    "Cost": price,
+                    "CargoType": "Parcel",
+                    "SeatsAmount": seats_amount,
+                    "RedeliveryCalculate": redelivery_calculate,
+                    "DateTime": now.into_ttn_time()
+                }),
+            )
             .await?;
         Ok(resp)
     }
 
-    pub async fn get_document_list(&self, date_time_to: Option<String>, date_time_from: Option<String>) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
-        props.DateTimeTo = date_time_to;
-        props.DateTimeFrom = date_time_from;
-
-        let resp = self.build_request("InternetDocument", "getDocumentList", props).await?;
+    pub async fn get_document_list(
+        &self,
+        date_time_to: Option<String>,
+        date_time_from: Option<String>,
+        date_time_of_ttn: Option<String>,
+    ) -> Result<NovaResponse<NovaTTNFromList>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request(
+                "InternetDocument",
+                "getDocumentList",
+                json!({
+                    "DateTimeTo": date_time_to,
+                    "DateTimeFrom": date_time_from,
+                    "DateTime": date_time_of_ttn
+                }),
+            )
+            .await?;
         Ok(resp)
     }
 
-    /// DeliveryDate returns
-    pub async fn get_document_delivery_date(&self, send_date: String, service_type: NovaServiceType, city_sender_ref: String, city_recipient_ref: String) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
+    pub async fn get_document_delivery_date(
+        &self,
+        send_date: String,
+        service_type: NovaServiceType,
+        city_sender_ref: String,
+        city_recipient_ref: String,
+    ) -> Result<NovaResponse<NovaDeliveryDate>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request(
+                "InternetDocument",
+                "getDocumentDeliveryDate",
+                json!({
+                    "DateTime": send_date,
+                    "ServiceType": service_type,
+                    "CitySender": city_sender_ref,
+                    "CityRecipient": city_recipient_ref
+                }),
+            )
+            .await?;
 
-        props.DateTime = Some(send_date);
-        props.ServiceType = Some(service_type.to_string());
-        props.CitySender = Some(city_sender_ref);
-        props.CityRecipient = Some(city_recipient_ref);
-
-        let resp = self.build_request("InternetDocument", "getDocumentDeliveryDate", props).await?;
-        
         Ok(resp)
     }
 
-    pub async fn registry_insert(&self, document_refs: Vec<String>, add_to_exists_registy: Option<String>) -> Result<NovaResponse, Box<dyn std::error::Error>> {
-        let mut props = Properties::default();
+    pub async fn scan_sheet_insert_documents(
+        &self,
+        document_refs: Vec<String>,
+        add_to_exists_registy: Option<String>,
+    ) -> Result<NovaResponse<NovaScanSheetCreate>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request(
+                "ScanSheet",
+                "insertDocuments",
+                json!({
+                    "DocumentRefs": document_refs,
+                    "Ref": add_to_exists_registy
+                }),
+            )
+            .await?;
 
-        props.DocumentRefs = Some(document_refs);
-        props.Ref = add_to_exists_registy;
-
-        let resp = self.build_request("ScanSheet", "insertDocuments", props).await?;
-        
         Ok(resp)
     }
 
-    pub async fn registry_print_link(&self, registery_ref: String) -> String {
-        format!("https://my.novaposhta.ua/scanSheet/printScanSheet/refs[]/{}/type/pdf/apiKey/{}", registery_ref, self.api_key)
+    pub async fn scan_sheet_delete(
+        &self,
+        scan_sheet_refs: Vec<String>,
+    ) -> Result<NovaResponse<ScanSheetRefsDelete>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request(
+                "ScanSheet",
+                "deleteScanSheet",
+                json!({
+                    "ScanSheetRefs": scan_sheet_refs,
+                }),
+            )
+            .await?;
+
+        Ok(resp)
     }
-    pub async fn ttn_print_link(&self, ttns: Vec<String>) -> String {
-        format!("https://my.novaposhta.ua/orders/printDocument/orders[]/{}/type/pdf/apiKey/{}", ttns.join(","), self.api_key)
-    } 
+
+    pub async fn scan_sheet_delete_ttns(
+        &self,
+        documents_refs: Vec<String>,
+    ) -> Result<NovaResponse<ScanSheetRefsDelete>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request(
+                "ScanSheet",
+                "removeDocuments",
+                json!({
+                    "DocumentRefs": documents_refs,
+                }),
+            )
+            .await?;
+
+        Ok(resp)
+    }
+
+    pub async fn get_scan_sheet_list(
+        &self,
+    ) -> Result<NovaResponse<ScanSheetListItem>, Box<dyn std::error::Error>> {
+        let resp = self
+            .build_request("ScanSheet", "getScanSheetList", json!({}))
+            .await?;
+
+        Ok(resp)
+    }
+
+    pub fn internet_document_print(&self, ttns: Vec<String>) -> String {
+        format!(
+            "https://my.novaposhta.ua/orders/printDocument/orders[]/{}/type/pdf/apiKey/{}",
+            ttns.join(","),
+            self.api_key
+        )
+    }
+
+    // pub fn scan_sheet_print(&self, scan_sheet_ref: String) -> String {
+    //     format!(
+    //         "https://my.novaposhta.ua/scanSheet/printScanSheet/refs[]/{}/type/pdf/apiKey/{}",
+    //         scan_sheet_ref, self.api_key
+    //     )
+    // }
+
+    pub async fn scan_sheet_print(
+        &self,
+        scan_sheet_ref: String,
+    ) -> Result<bytes::Bytes, Box<dyn std::error::Error>> {
+        let payload: NovaRequest = NovaRequest::new(
+            "printFull".to_string(),
+            "InternetDocument".to_string(),
+            json!({
+                "printForm": "ScanSheet",
+                "ScanSheetRefs": vec![scan_sheet_ref],
+                "Type": "pdf",
+                "PrintOrientation": "portrait"
+            }),
+            self.api_key.clone(),
+        );
+
+        let resp = self
+            .client
+            .post("https://api.novaposhta.ua/v2.0/json/")
+            .json(&payload)
+            .send()
+            .await?;
+        // let mut file = std::fs::File::create("./test.pdf")?;
+        // let mut content = Cursor::new();
+        // std::io::copy(&mut content, &mut file)?;
+
+        Ok(resp.bytes().await?)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    const KHARKIV_REF: &str = "db5c88e0-391c-11dd-90d9-001a92567626";
-    use std::{env, vec};
+    use crate::types::{Address, NovaOptionsSeat, NovaParcelWightStandarts};
 
     use super::*;
-    use chrono::{Datelike, Duration};
     use dotenv::dotenv;
 
-    #[tokio::test]
-    async fn get_cities_test() {
-        dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let response = nova.get_cities(None).await.unwrap();
-        println!("{:?}", response);
-    }
+    const KHARKIV_REF: &str = "db5c88e0-391c-11dd-90d9-001a92567626";
 
     #[tokio::test]
     async fn get_warehouses_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let mut response = nova
-            .get_warehouses(Some(KHARKIV_REF.to_owned()), None)
+        let nova = Novaposhta::default();
+        let warehouses = nova
+            .get_warehouses(Some(KHARKIV_REF.to_string()), Some("14".to_string()))
             .await
             .unwrap();
-        if response.success {
-            println!("{:?}", response.data.pop());
-        };
+        println!("{:#?}", warehouses);
     }
 
     #[tokio::test]
-    async fn counterparty_create_test() {
+    async fn get_statuses_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let response = nova
-            .counterparty_create(
-                "Фелікс".to_owned(),
-                "Яковлєв".to_owned(),
-                "0997979789".to_owned(),
-                "Recipient".to_string(),
-                None,
-                None,
-            )
+
+        let nova = Novaposhta::default();
+        let ttns = nova
+            .get_status_documents(vec![NovaDocument::new("2045045800000".to_string(), None)])
             .await
             .unwrap();
-        if !response.success {
-            println!("{:#?}", response);
-        }
-        let data = response.data().unwrap();
-        let contact_person = data.ContactPerson.unwrap().data().unwrap();
-        assert_ne!(data.Ref, contact_person.Ref);
-        // println!("{:?}", response);
-        println!("{:?}", response.data.first().unwrap().Description);
-        println!("{:?}", response.data.first().unwrap().ContactPerson);
+        println!("{:#?}", ttns);
     }
 
     #[tokio::test]
-    async fn contact_person_create_test() {
+    async fn get_delivery_date_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let response = nova
-            .counterparty_create(
-                "Фелікс".to_owned(),
-                "Яковлєв".to_owned(),
-                "0997979789".to_owned(),
-                "Recipient".to_string(),
-                None,
-                None,
-            )
-            .await
-            .unwrap();
-        let data = response.data().unwrap();
-        let contact_person = data.ContactPerson.unwrap().data().unwrap();
-        assert_ne!(data.Ref, contact_person.Ref);
-        // println!("{:?}", response);
-        println!("{:?}", data.Ref);
-        println!("{:?}", contact_person.Ref)
-    }
 
-    #[ignore = "Need alive ttn"]
-    #[tokio::test]
-    async fn get_status_documents_test() {
-        dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let response = nova
-            .get_status_documents(vec![NovaDocument {
-                DocumentNumber: env::var("TTN").unwrap(),
-                Phone: env::var("PHONE").unwrap(),
-            }])
-            .await
-            .unwrap();
-        let data = response.data().unwrap();
-        let address = data.RecipientAddress.unwrap();
-        let date_shedule = data.ScheduledDeliveryDate.unwrap();
-        let cargo_type = data.CargoType.unwrap();
-        let status = data.Status.unwrap();
-        println!("{:?}", vec![address, date_shedule, cargo_type, status]);
-    }
-
-    #[tokio::test]
-    async fn get_document_price_test() {
-        dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let response = nova
-            .get_document_price(
+        let nova = Novaposhta::default();
+        let now = chrono::Local::now();
+        let ttns = nova
+            .get_document_delivery_date(
+                now.into_ttn_time(),
+                NovaServiceType::WarehouseDoors,
                 KHARKIV_REF.to_string(),
                 KHARKIV_REF.to_string(),
-                "0.5".to_string(),
-                "WarehouseWarehouse".to_string(),
-                "250".to_string(),
-                "Parcel".to_string(),
-                1.to_string(),
-                None,
-                Some(NovaRedeliveryCalculate {
-                    CargoType: "Money".to_string(),
-                    Amount: "250".to_string(),
-                }),
             )
             .await
             .unwrap();
-        let data = response.data().unwrap();
-        let cost_delivery = data.Cost.unwrap();
-        let cost_redelivery = data.CostRedelivery.unwrap();
-        println!("{:?}, {:?}", cost_delivery, cost_redelivery);
+        println!("{:#?}", ttns);
     }
 
     #[tokio::test]
     async fn get_document_list_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let response = nova
-            .get_document_list(None, None)
-            .await
-            .unwrap();
-        if response.success {
-            println!("{:?}", response);
-            println!("{:?}", response.data.first().unwrap().StateName.as_ref().unwrap());
-        };
+
+        let nova = Novaposhta::default();
+        let ttns = nova.get_document_list(None, None, None).await.unwrap();
+        println!("{:#?}", ttns);
     }
 
     #[tokio::test]
-    async fn get_document_delivery_date_test() {
+    async fn scan_sheet_insert_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let date_time = {
-            let now = chrono::Local::today() + Duration::days(1);
-            format!("{}.{}.{}", now.day(), now.month(), now.year())
-        };
-        let mut response = nova
-            .get_document_delivery_date(date_time, NovaServiceType::WarehouseWarehouse, KHARKIV_REF.to_string(), KHARKIV_REF.to_string())
+
+        let nova = Novaposhta::default();
+        let scan_sheet = nova
+            .scan_sheet_insert_documents(
+                vec!["436c1ba6-3373-11ec-8513-b88303659df5".to_string()],
+                None,
+            )
             .await
             .unwrap();
-        if response.success {
-            println!("{:?}", response.data.pop());
-        };
+        println!("{:#?}", scan_sheet);
     }
 
     #[tokio::test]
-    async fn counterparty_search_test() {
+    async fn scan_sheet_print_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let mut response = nova
-            .counterparty_search(None, "Sender".to_string())
+
+        let nova = Novaposhta::default();
+        let _ = nova
+            .scan_sheet_print("f23f5752-3377-11ec-8513-b88303659df5".to_string())
             .await
             .unwrap();
-        if response.success {
-            println!("{:?}", response.data.pop());
-        };
+        println!("OK!");
     }
 
     #[tokio::test]
-    async fn get_counterparty_contact_persons_test() {
+    async fn get_price_document_test() {
         dotenv().ok();
-        let nova = NovaposhtaRaw::default();
-        let counter_ref = nova
-            .counterparty_search(None, "Sender".to_string())
+        let nova = Novaposhta::default();
+        let ttns = nova
+            .get_document_price(
+                KHARKIV_REF.to_string(),
+                KHARKIV_REF.to_string(),
+                NovaServiceType::WarehouseWarehouse,
+                vec![Cargo::new(
+                    150,
+                    NovaOptionsSeat::from(NovaParcelWightStandarts::UpToHalfKilogram),
+                    true,
+                    "Аксесуары".to_string(),
+                )],
+            )
+            .await
+            .unwrap();
+        println!("{:#?}", ttns);
+    }
+
+    #[tokio::test]
+    async fn internet_document_create_test() {
+        dotenv().ok();
+        let nova = Novaposhta::default();
+        let sender_warehouse_ref = nova
+            .get_warehouses(Some(KHARKIV_REF.to_string()), Some("14".to_string()))
             .await
             .unwrap()
             .data()
             .unwrap()
-            .Ref
-            .unwrap();
-        let mut response = nova
-            .get_counterparty_contact_persons(counter_ref)
+            .Ref;
+        let sender = Sender::new(KHARKIV_REF, &sender_warehouse_ref, "+380991234567");
+        let recipient_address = Address::warehouse(14);
+        let recipient = Recipient::new(
+            "Киев".to_string(),
+            "Тест Тест Тест".to_string(),
+            "+380991234567",
+            true,
+            recipient_address,
+        );
+        let now = chrono::Local::now();
+        let ttn = nova
+            .internet_document_create(
+                recipient,
+                sender,
+                vec![Cargo::new(
+                    150,
+                    NovaOptionsSeat::new(0.5, 20, 20, 5, 0.5),
+                    true,
+                    "Аксесуары".to_string(),
+                )],
+                now,
+            )
             .await
             .unwrap();
-        println!("{:#?}", response);
-        if response.success {
-            println!("{:?}", response.data.pop());
-        };
+        println!("{:#?}", ttn);
+        let delete_response = nova
+            .internet_document_delete(vec![ttn.data().unwrap().Ref])
+            .await
+            .unwrap();
+        println!("{:#?}", delete_response);
     }
 }
+
+// impl From<Vec<Value>> for NovaResponsePublic<NovaCities> {
+//     fn from(data: Vec<Value>) -> Self {
+//         NovaResponsePublic {
+//             data: NovaCities {
+//                 Description: data["Description"],
+//                 DescriptionRU: data["DescriptionRU"],
+//                 Ref: data["Ref"],
+//             },
+//         }
+//     }
+// }
+
+// impl Vec<T> for From<Vec<Value>> {}

@@ -1,8 +1,8 @@
 [package]
-name = "novaposhta"
-version = "0.1.2"
+name = "novaposhta-evo"
+version = "0.2.0"
 edition = "2018"
-description = "Api for novapostha"
+description = "[UPDATED] Api for novapostha"
 documentation = "https://tokyjo.gitlab.io/novaposhta-rs"
 repository = "https://gitlab.com/tokyjo/novaposhta-rs"
 homepage = "https://gitlab.com/tokyjo/novaposhta-rs"
@@ -11,14 +11,17 @@ license = "MIT"
 keywords = ["api", "novaposhta", "http"]
 categories = ["accessibility", "api-bindings", "asynchronous"]
 
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
+uuid = "0.8.2"
 serde_json = "1.0.66"
 chrono = "0.4"
+log = "0.4.0"
+env_logger = "0.8.4"
+bytes = "1.1.0"
 
 [dev-dependencies]
 dotenv = "0.15.0"
