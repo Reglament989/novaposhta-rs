@@ -222,11 +222,10 @@ impl NovaResponse {
 }
 
 #[allow(non_snake_case)]
-#[derive(Serialize, Deserialize, Debug, Default ,Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct DeliveryDate {
     pub date: String,
 }
-
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -299,7 +298,7 @@ pub struct NovaResponseData {
     pub CitySender: Option<String>,
     pub CityRecipient: Option<String>,
     pub WarehouseRecipient: Option<String>,
-    pub AfterpaymentOnGoodsCost: Option<i32>,
+    pub AfterpaymentOnGoodsCost: Option<String>,
     pub ServiceType: Option<String>,
     pub UndeliveryReasonsSubtypeDescription: Option<String>,
     pub WarehouseRecipientNumber: Option<i32>,
@@ -323,12 +322,14 @@ pub struct NovaResponseData {
     // "BackwardDeliverySubTypesServices": [],
     // "BackwardDeliverySubTypesActions": [],
     pub UndeliveryReasons: Option<String>,
-    pub Cost: Option<i32>,
-    pub CostRedelivery: Option<i32>,
-    pub CostOnSite: Option<i32>,
+    pub Cost: Option<String>,
+    pub CostRedelivery: Option<String>,
+    pub CostOnSite: Option<String>,
     pub EstimatedDeliveryDate: Option<String>,
     pub IntDocNumber: Option<String>,
     pub TypeDocument: Option<String>,
+    pub StateId: Option<String>,
+    pub StateName: Option<String>
 }
 
 #[allow(non_snake_case)]

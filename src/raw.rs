@@ -480,19 +480,20 @@ mod tests {
         let data = response.data().unwrap();
         let cost_delivery = data.Cost.unwrap();
         let cost_redelivery = data.CostRedelivery.unwrap();
-        println!("{:?}", cost_delivery + cost_redelivery);
+        println!("{:?}, {:?}", cost_delivery, cost_redelivery);
     }
 
     #[tokio::test]
     async fn get_document_list_test() {
         dotenv().ok();
         let nova = NovaposhtaRaw::default();
-        let mut response = nova
+        let response = nova
             .get_document_list(None, None)
             .await
             .unwrap();
         if response.success {
-            println!("{:?}", response.data.pop());
+            println!("{:?}", response);
+            println!("{:?}", response.data.first().unwrap().StateName.as_ref().unwrap());
         };
     }
 

@@ -119,7 +119,7 @@ impl Novaposhta {
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
                 ttn_ref: data.Ref.unwrap(),
-                cost_delivery: data.CostOnSite.unwrap(),
+                cost_delivery: data.CostOnSite.unwrap().parse::<i32>().unwrap_or_default(),
                 estimated_delivery_date: data.EstimatedDeliveryDate.unwrap(),
             });
         } else if payload.recipient.address.pochtomat_number.is_some() {
@@ -165,7 +165,7 @@ impl Novaposhta {
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
                 ttn_ref: data.Ref.unwrap(),
-                cost_delivery: data.CostOnSite.unwrap(),
+                cost_delivery: data.CostOnSite.unwrap().parse::<i32>().unwrap_or_default(),
                 estimated_delivery_date: data.EstimatedDeliveryDate.unwrap(),
             });
         } else if payload.recipient.address.address_name.is_some() {
@@ -203,7 +203,7 @@ impl Novaposhta {
             return Ok(CreateNewTtnResponse {
                 ttn: data.IntDocNumber.unwrap(),
                 ttn_ref: data.Ref.unwrap(),
-                cost_delivery: data.CostOnSite.unwrap(),
+                cost_delivery: data.CostOnSite.unwrap().parse::<i32>().unwrap_or_default(),
                 estimated_delivery_date: data.EstimatedDeliveryDate.unwrap(),
             });
         } else {
