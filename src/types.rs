@@ -1,4 +1,3 @@
-use crate::error::NovaRequestError;
 use core::fmt;
 
 use chrono::{DateTime, Datelike, TimeZone};
