@@ -5,6 +5,7 @@ use crate::{
         ScanSheetListItem, ScanSheetRefsDelete,
     },
 };
+use chrono::Duration;
 use log::debug;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
@@ -301,7 +302,7 @@ impl Novaposhta {
             json!({})
         };
 
-        let now = chrono::Local::now();
+        let now = chrono::Local::now() + Duration::weeks(1);
 
         let resp = self
             .build_request(
@@ -479,6 +480,7 @@ mod tests {
     use crate::types::{Address, NovaOptionsSeat, NovaParcelWightStandarts};
 
     use super::*;
+    use chrono::Duration;
     use dotenv::dotenv;
 
     const KHARKIV_REF: &str = "db5c88e0-391c-11dd-90d9-001a92567626";
@@ -511,7 +513,7 @@ mod tests {
         dotenv().ok();
 
         let nova = Novaposhta::default();
-        let now = chrono::Local::now();
+        let now = chrono::Local::now() + Duration::days(3);
         let ttns = nova
             .get_document_delivery_date(
                 now.into_ttn_time(),
@@ -601,7 +603,7 @@ mod tests {
             true,
             recipient_address,
         );
-        let now = chrono::Local::now();
+        let now = chrono::Local::now() + Duration::days(3);
         let ttn = nova
             .internet_document_create(
                 recipient,
