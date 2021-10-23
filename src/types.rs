@@ -141,20 +141,20 @@ pub struct NovaTTN {
 #[derive(Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct NovaTTNFromList {
-    CityRecipient: String,
-    CityRecipientDescription: String,
-    CitySender: String,
-    CitySenderDescription: String,
-    ContactRecipient: String,
-    ContactSender: String,
-    Cost: String,
-    CostOnSite: String,
-    CreateTime: String,
-    EstimatedDeliveryDate: String,
-    IntDocNumber: String,
-    State: String,
-    StateId: String,
-    StateName: String,
+    pub CityRecipient: String,
+    pub CityRecipientDescription: String,
+    pub CitySender: String,
+    pub CitySenderDescription: String,
+    pub ContactRecipient: String,
+    pub ContactSender: String,
+    pub Cost: String,
+    pub CostOnSite: String,
+    pub CreateTime: String,
+    pub EstimatedDeliveryDate: String,
+    pub IntDocNumber: String,
+    pub State: String,
+    pub StateId: String,
+    pub StateName: String,
 }
 
 #[allow(non_snake_case)]
