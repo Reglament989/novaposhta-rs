@@ -529,9 +529,14 @@ mod tests {
     #[tokio::test]
     async fn get_document_list_test() {
         dotenv().ok();
+        std::env::set_var("RUST_LOG", "DEBUG");
+        env_logger::init();
 
         let nova = Novaposhta::default();
-        let ttns = nova.get_document_list(None, None, None).await.unwrap();
+        let ttns = nova
+            .get_document_list(None, None, Some("22.10.2021".to_string()))
+            .await
+            .unwrap();
         println!("{:#?}", ttns);
     }
 

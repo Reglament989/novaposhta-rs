@@ -155,6 +155,7 @@ pub struct NovaTTNFromList {
     pub State: String,
     pub StateId: String,
     pub StateName: String,
+    pub RecipientContactPhone: String,
 }
 
 #[allow(non_snake_case)]
