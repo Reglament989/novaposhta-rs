@@ -45,6 +45,8 @@ impl NovaPoshta {
             )
             .await?)
     }
+
+    pub async fn new_shipment(&self) {}
 }
 
 #[derive(Serialize, Deserialize, Debug)]

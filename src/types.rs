@@ -43,20 +43,6 @@ pub struct NovaReferenceBooks {
     pub r#ref: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct NovaWarehouse {
-    pub description: String,
-    pub r#ref: String,
-    pub short_address: String,
-    pub phone: String,
-    pub number: String,
-    pub city_ref: String,
-    pub city_description: String,
-    pub longitude: String,
-    pub latitude: String,
-}
-
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct NovaDocument {
