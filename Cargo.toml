@@ -1,8 +1,8 @@
 [package]
 name = "novaposhta"
 version = "0.2.1"
-edition = "2018"
-description = "[UPDATED] Api for novapostha"
+edition = "2021"
+description = "Api for novapostha"
 documentation = "https://tokyjo.gitlab.io/novaposhta-rs"
 repository = "https://gitlab.com/tokyjo/novaposhta-rs"
 homepage = "https://gitlab.com/tokyjo/novaposhta-rs"
@@ -18,12 +18,10 @@ crate-type = ["cdylib"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-uuid = "0.8.2"
+anyhow = "1.0.66"
 serde_json = "1.0.66"
 chrono = "0.4"
 log = "0.4.0"
-env_logger = "0.8.4"
-bytes = "1.1.0"
 reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
 
 

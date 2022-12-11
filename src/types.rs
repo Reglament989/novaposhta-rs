@@ -4,105 +4,89 @@ use chrono::{DateTime, Datelike, TimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaRequest {
-    pub modelName: String,
-    pub calledMethod: String,
-    pub methodProperties: serde_json::Value,
-    pub apiKey: String,
+    pub model_name: String,
+    pub called_method: String,
+    pub method_properties: serde_json::Value,
+    pub api_key: String,
 }
 
-#[allow(non_snake_case)]
 impl NovaRequest {
     pub fn new(
-        calledMethod: String,
-        modelName: String,
-        methodProperties: serde_json::Value,
-        apiKey: String,
+        called_method: String,
+        model_name: String,
+        method_properties: serde_json::Value,
+        api_key: String,
     ) -> Self {
         NovaRequest {
-            calledMethod,
-            modelName,
-            methodProperties,
-            apiKey,
+            called_method,
+            model_name,
+            method_properties,
+            api_key,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct NovaResponse<T: Clone> {
-    pub success: bool,
-    pub data: Vec<T>,
-    pub errors: Vec<Value>,
-    pub warnings: Vec<Value>,
-}
-
-impl<T: Clone> NovaResponse<T> {
-    pub fn data(&self) -> Option<T> {
-        self.data.clone().into_iter().nth(0)
-    }
-}
-
-#[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaCity {
-    pub Description: String,
-    pub Ref: String,
+    pub description: String,
+    pub r#ref: String,
 }
 
-#[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaReferenceBooks {
-    pub Description: String,
-    pub Ref: String,
+    pub description: String,
+    pub r#ref: String,
 }
 
-#[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaWarehouse {
-    pub Description: String,
-    pub Ref: String,
-    pub ShortAddress: String,
-    pub Phone: String,
-    pub Number: String,
-    pub CityRef: String,
-    pub CityDescription: String,
-    pub Longitude: String,
-    pub Latitude: String,
+    pub description: String,
+    pub r#ref: String,
+    pub short_address: String,
+    pub phone: String,
+    pub number: String,
+    pub city_ref: String,
+    pub city_description: String,
+    pub longitude: String,
+    pub latitude: String,
 }
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaDocument {
-    pub DocumentNumber: String,
-    pub Phone: String,
+    pub document_number: String,
+    pub phone: String,
 }
 
 impl NovaDocument {
     pub fn new(ttn: String, phone: Option<String>) -> Self {
         NovaDocument {
-            DocumentNumber: ttn,
-            Phone: phone.unwrap_or("".to_string()),
+            document_number: ttn,
+            phone: phone.unwrap_or_default(),
         }
     }
 }
-#[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaTTNCreate {
-    pub IntDocNumber: String,
-    pub Ref: String,
-    pub CostOnSite: i32,
-    pub EstimatedDeliveryDate: String,
+    pub int_doc_number: String,
+    pub r#ref: String,
+    pub cost_on_site: i32,
+    pub estimated_delivery_date: String,
 }
 
-#[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NovaTTNDelete {
-    pub Ref: String,
+    pub r#ref: String,
 }
 
-#[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct NovaTTN {
